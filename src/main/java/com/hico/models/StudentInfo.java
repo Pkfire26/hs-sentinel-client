@@ -1,40 +1,26 @@
-
 package com.hico.models;
 
-import java.util.HashMap;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import java.util.HashSet;
+
+import com.hico.models.*;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-/*
-@Getter
-@Setter
-*/
+
 @JsonAutoDetect(fieldVisibility = Visibility.ANY)
 public class StudentInfo {
 
-    private String emailId;
-    private String password;
-
-    private String firstName;
-    private String lastName;
-    private String schoolName;
-    private String schoolZip;
-    private String regCode;
+    private UserInfo    user;
+    private School      school;
+    private HashSet<ClubAssociation> clubAssociations = new HashSet<ClubAssociation>();
 
     public StudentInfo() {}
-    public StudentInfo(String emailId, String pass,
-            String fname, String lname, String school,
-            String zip, String rcode) {
 
-        this.emailId = emailId;
-        this.password = pass;
-        this.firstName = fname;
-        this.lastName = lname;
-        this.schoolName = school;
-        this.schoolZip = zip;
-        this.regCode = rcode;
+    public StudentInfo(UserInfo user, School school, HashSet<ClubAssociation> clubs) {
+        this.user = user;
+        this.school = school;
+        this.clubAssociations = clubAssociations;
+        System.out.println("no of clubs = " + this.clubAssociations.size());
     }
 }

@@ -23,20 +23,13 @@ public class Address {
         this.country = country;
     }
 
-    public static Address contruct(Map map) throws Exception {
+    public static Address construct(Request req) throws Exception {
 
-
-        String street  = (String) map.get("street");
-        String city  = (String) map.get("city");
-        String state = (String) map.get("state");
-        String zip = (String) map.get("zip");
-        String country = (String) map.get("country");
-
-        if ((zip == null) || (zip.trim().length == 0)) {
-            throw Exception("Missing Zip code");
-        }
-
-        zip = zip.trim();
+        String street  = req.get("street", false);
+        String city  = req.get("city", false);
+        String state = req.get("state", false);
+        String zip = req.get("zip");
+        String country = req.get("country", false);
 
         return new Address (street, city, state, zip, country);
     }

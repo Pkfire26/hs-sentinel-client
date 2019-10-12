@@ -6,12 +6,14 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.boot.CommandLineRunner;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 
 import com.hico.client.SentinelClient;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.List;
 import java.util.HashMap;
 
 import com.hico.models.*;
@@ -50,16 +52,20 @@ public class SentinelApplication {
 
        HashMap map = new HashMap<String,String>();
 
+       System.out.println(args);
        String subject = args[0];
        String sub = "";
-       if (subject.equals("-a")) {
-           sub = "admin";
+       if (subject.equals("-o")) {
+           sub = Role.ADMIN;
        }
        else if (subject.equals("-s")) {
-           sub = "student";
+           sub = Role.STUDENT;
        }
        else if (subject.equals("-t")) {
-           sub = "teacher";
+           sub = Role.TEACHER;
+       }
+       else if (subject.equals("-a")) {
+           sub = Role.SCHOOL_ADMIN;
        }
        else  {
            throw new Exception("Invalid cmd");
@@ -80,176 +86,176 @@ public class SentinelApplication {
        return map;
    }
 
-   public void doStudent(HashMap map)  throws Exception {
+   public void doStudent(Request req)  throws Exception {
        System.out.println("Student");
 
-       String op = ((String)map.get("op")).trim();
-       String userId = ((String) map.get("user")).trim();
-       String pass = ((String) map.get("pass")).trim();
-        if ((userId.length() == 0) || (pass.length() == 0)) {
-            throw new Exception ("Missing Creds");
-        }
         sentinel = new SentinelClient();
-        if (op.equals("register")) {
-            SchoolLookupInfo sInfo = getSchoolLookupInfo(map);
-            String schoolId = sentinel.lookupSchoolId(sInfo);
-            System.out.println("FOO:" + schoolId);
-            map.put("schoolId", schoolId);
-            StudentRegisterInfo info = getStudentRegisterInfo(map);
-            sentinel.register(info);
+        if (req.Op.equals(Request.OP_REGISTER)) {
+            if (req.Type.equals(Request.TYPE_STUDENT)) {
+                SchoolLookupInfo sInfo = getSchoolLookupInfo(req);
+                String schoolId = sentinel.lookupSchoolId(sInfo);
+                System.out.println("FOO:" + schoolId);
+                req.augment("schoolId", schoolId);
+                StudentRegisterInfo info = getStudentRegisterInfo(req);
+                sentinel.register(info);
+            } else if (req.Type.equals(Request.TYPE_CLUB)) {
+                sentinel.registerWithClub(req);
+            }
         } else {
-            sentinel.login(userId, pass);
-            String type = ((String)map.get("type")).trim();
-            if (op.equals("get")) {
-                if (type.equals("profile")) {
+            sentinel.login(req.User, req.Pass);
+            if (req.Op.equals(Request.OP_GET)) {
+                if (req.Type.equals(Request.TYPE_STUDENT)) {
                     sentinel.getLoginProfile();
-                } else if (type.equals("clubs")) {
-                    sentinel.listMyClubs(map);
-                } else if (type.equals("all-clubs")) {
-                    sentinel.listAllClubs(map);
-                } else if (type.equals("club-members")) {
-                    sentinel.listClubMemberStatus(map);
+                } else if (req.Type.equals(Request.TYPE_CLUB)) {
+                    sentinel.listClubs(req);
                 }
-            } else if (op.equals("update")) {
-                if (type.equals("profile")) {
-                    sentinel.upddateProfile(map);
-                } else if (type.equals("register-club")) {
-                    sentinet.registerWithClub(map);
-                } else if (type.equals("unregister-club")) {
-                    sentinet.registerWithClub(map);
-                } else if (type.equals("club-status")) {
-                    sentinel.updateClubMemberStatus(map);
+            } else if (req.Op.equals(Request.OP_UPDATE)) {
+                if (req.Type.equals(Request.TYPE_STUDENT)) {
+                    sentinel.updateProfile(req);
+                } else if (req.Type.equals(Request.TYPE_CLUB)) {
+                    sentinel.updateClubMemberStatus(req);
+                }
+            } else if (req.Op.equals(Request.OP_UNREGISTER)) {
+                if (req.Type.equals(Request.TYPE_STUDENT)) {
+                    sentinel.unregisterStudent(req);
+                } else if (req.Type.equals(Request.TYPE_CLUB)) {
+                    sentinel.unregisterWithClub(req);
                 }
             }
         }
    }
 
-   public void doTeacher(HashMap map)  throws Exception {
+   public void doTeacher(Request req)  throws Exception {
        System.out.println("Teacher");
 
-       String op = ((String)map.get("op")).trim();
-       String userId = ((String) map.get("user")).trim();
-       String pass = ((String) map.get("pass")).trim();
-       if ((userId.length() == 0) || (pass.length() == 0)) {
-           throw new Exception ("Missing Creds");
-       }
-
        sentinel = new SentinelClient();
-       sentinel.login(userId, pass);
-       if (op.equals("profile")) {
-           sentinel.getLoginProfile();
-       } else if (op.equals("lookup")) {
-           String type = ((String)map.get("type"));
-           if (type == null) {
-               throw new Exception("Missing type param");
+       sentinel.login(req.User, req.Pass);
+       if (req.Type.equals(Request.OP_GET)) {
+           if (req.Type.equals(Request.TYPE_TEACHER)) {
+               sentinel.getLoginProfile();
            }
-           type = type.trim();
-           /*
-           if (type.equals("student")) {
-               LookupInfo = getStudentLookupInfo(map);
-               List<StudentInfo> infoList = sentinel.
-           } else if (type.equals("clubs")) {
-               LookupInfo = getClubLookupInfo(map);
-               List<ClubInfo> clubs = sentinel.listClubs(info);
+           else if (req.Type.equals(Request.TYPE_STUDENT)) {
+               List<StudentInfo> students = sentinel.listStudents(req);
+               System.out.println("student count: " + students.size());
+               ObjectMapper mapper = new ObjectMapper();
+               System.out.println(mapper.writeValueAsString(students));
+           } else if (req.Type.equals(Request.TYPE_CLUB)) {
+               List<Club> clubs = sentinel.listClubs(req);
            }
-           */
-       }
+       } else if (req.Op.equals(Request.OP_UPDATE)) {
+           if (req.Type.equals(Request.TYPE_TEACHER)) {
+           }
+       } else if (req.Op.equals(Request.OP_UNREGISTER)) {
 
+       }
    }
 
-   public void doAdmin(HashMap map)  throws Exception {
+
+   public void doAdmin(Request req)  throws Exception {
        System.out.println("Admin");
-       String userId = ((String) map.get("user")).trim();
-       String pass = ((String) map.get("pass")).trim();
-       if ((userId.length() == 0) || (pass.length() == 0)) {
-           throw new Exception ("Missing Creds");
-       }
-
-       String op = ((String)map.get("op")).trim();
 
        sentinel = new SentinelClient();
-       sentinel.login(userId, pass);
+       sentinel.login(req.User, req.Pass);
 
-       if (op.equals("register")) {
-           School school = School.construct(map);
+       if (req.Op.equals(Request.OP_REGISTER)) {
+           School school = School.construct(req);
            sentinel.registerSchool(school);
-       } else if (op.inregister("get")) {
-           sentinel.listSchools(map);
-       } else if (op.equals("uodate")) {
-           sentinel.updateSchool(map);
-       } else if (op.equals("unregister")) {
-           sentinel.unregisterSchool(map);
+       } else if (req.Op.equals(Request.OP_GET)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               List<SchoolInfo> schools = sentinel.listSchools(req);
+               ObjectMapper mapper = new ObjectMapper();
+               System.out.println(mapper.writeValueAsString(schools));
+           } else if (req.Type.equals(Request.TYPE_STUDENT)) {
+               List<StudentInfo> students = sentinel.listStudents(req);
+               System.out.println("student count: " + students.size());
+               ObjectMapper mapper = new ObjectMapper();
+               System.out.println(mapper.writerWithDefaultPrettyPrinter().
+                       writeValueAsString(students));
+           }
+       } else if (req.Op.equals(Request.OP_UPDATE)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               sentinel.updateSchool(req);
+           }
+       } else if (req.Op.equals(Request.OP_UNREGISTER)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               sentinel.unregisterSchool(req);
+           }
        }
    }
 
-   public void doSchoolAdmin(HashMap map)  throws Exception {
+   public void doSchoolAdmin(Request req)  throws Exception {
        System.out.println("School Admin");
-       String userId = ((String) map.get("user")).trim();
-       String pass = ((String) map.get("pass")).trim();
-       if ((userId.length() == 0) || (pass.length() == 0)) {
-           throw new Exception ("Missing Creds");
-       }
-       String op = ((String)map.get("op")).trim();
+
        sentinel = new SentinelClient();
-       if (op.equals("register")) {
-           String type = ((String)map.get("type")).trim();
-           if (type.equals("club")) {
-               sentinel.registerClub(map);
+       if (req.Op.equals(Request.OP_REGISTER)) {
+           if (req.Type.equals(Request.TYPE_CLUB)) {
+               sentinel.registerClub(req);
            }
+       } else if (req.Op.equals(Request.OP_GET)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               List<SchoolInfo> schools = sentinel.listSchools(req);
+               ObjectMapper mapper = new ObjectMapper();
+               System.out.println(mapper.writeValueAsString(schools));
+           } else if (req.Type.equals(Request.TYPE_STUDENT)) {
+               List<StudentInfo> students = sentinel.listStudents(req);
+               System.out.println("student count: " + students.size());
+               ObjectMapper mapper = new ObjectMapper();
+               System.out.println(mapper.writeValueAsString(students));
 
-
+           }
+       } else if (req.Op.equals(Request.OP_UPDATE)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               sentinel.updateSchool(req);
+           }
+       } else if (req.Op.equals(Request.OP_UNREGISTER)) {
+           if (req.Type.equals(Request.TYPE_SCHOOL)) {
+               sentinel.unregisterSchool(req);
+           }
+       } else {
        }
+   }
+
+   public void doNothing(Request req)  throws Exception {
+        System.out.println("Invalid roles");
    }
 
    public void run(String[] args) throws Exception {
 
        HashMap map = parseParams(args);
 
-       String subject = (String)map.get("kind");
-       if (subject.equals("admin")) {
-           doAdmin(map);
-       } else if (subject.equals("student")) {
-           doStudent(map);
-       } else if (subject.equals("teacher")) {
-           doTeacher(map);
-       } else if (subject.equals("school-admin")) {
-           doSchoolAdmin(map);
+       Request req = new Request(map);
+
+       if (req.isRole(Role.ADMIN)) {
+           doAdmin(req);
+       } else if (req.isRole(Role.SCHOOL_ADMIN)) {
+           doSchoolAdmin(req);
+       } else if (req.isRole(Role.STUDENT)) {
+           doStudent(req);
+       } else if (req.isRole(Role.TEACHER)) {
+           doTeacher(req);
+       } else  {
+           doNothing(req);
        }
    }
 
-   private SchoolLookupInfo getSchoolLookupInfo(HashMap map) throws Exception {
-       String school = ((String) map.get("school")).trim();
-       String zip = ((String) map.get("zip")).trim();
+   private SchoolLookupInfo getSchoolLookupInfo(Request req) throws Exception {
+
+       String school = req.get("school", true);
+       String zip = req.get("zip", true);
 
        SchoolLookupInfo info = new SchoolLookupInfo(school, zip);
-
-       if ((school.length() == 0) || (zip.length() == 0)) {
-           throw new Exception("Invalid params");
-       }
        return info;
 
    }
 
-   private StudentRegisterInfo getStudentRegisterInfo(HashMap map) throws Exception {
+   private StudentRegisterInfo getStudentRegisterInfo(Request req) throws Exception {
 
-       String emailId = (String) map.get("user");
-       String pass = (String) map.get("pass");
-       String fname = (String) map.get("firstname");
-       String lname = (String) map.get("lastname");
-       String schoolId = (String) map.get("schoolId");
-       String rcode = (String) map.get("regcode");
-
-       if ((emailId == null) || (pass == null) || (fname == null) || (lname == null) ||
-               (schoolId == null) || (rcode == null)) {
-           throw new Exception("Missing Params");
-        }
-
-       if ((emailId.trim().length() == 0) || (pass.trim().length() == 0) ||
-               (fname.trim().length() == 0) || (lname.trim().length() == 0) || 
-               (schoolId.trim().length() == 0) ||
-               (rcode.length() == 0)) {
-           throw new Exception("Invalid params");
-        }
+       String emailId = req.User;
+       String pass = req.Pass;
+       String fname = req.get("firstname");
+       String lname = req.get("lastname");
+       String schoolId = req.get("schoolId");
+       String rcode = req.get("regcode");
 
        StudentRegisterInfo info = new StudentRegisterInfo(
                emailId, pass, fname, lname, schoolId, rcode);

@@ -56,6 +56,7 @@ public class SentinelClient {
     private static String USER_URI = baseURI + "/api/user";
     private static String SCHOOL_URI = baseURI + "/api/school";
     private static String CLUB_URI = baseURI + "/api/club";
+    private static String listStudents = STUDENT_URI + "/";
 
 
     public SentinelClient() {
@@ -75,43 +76,46 @@ public class SentinelClient {
         return headers;
     }
 
-    public  void login(String emailId, String pass) {
+    public  void login(String emailId, String pass) throws Exception {
 
         this.emailId = emailId;
         this.password = pass;
+        this.token = "";
 
-        try {
-            Login login = new Login(this.emailId, this.password);
-            ObjectMapper mapper = new ObjectMapper();
-            MultiValueMap<String, String> headers = this.getRequestHeaders(false);
-            HttpEntity<Login> request = new HttpEntity<Login>(login, headers);
-            LoginStatus loginResp = restTemplate.postForObject(loginURI, request, LoginStatus.class);
+        Login login = new Login(this.emailId, this.password);
+        ObjectMapper mapper = new ObjectMapper();
+        MultiValueMap<String, String> headers = this.getRequestHeaders(false);
+        HttpEntity<Login> request = new HttpEntity<Login>(login, headers);
+        LoginStatus loginResp = restTemplate.postForObject(loginURI, request, LoginStatus.class);
 
-            this.token = loginResp.getToken();
-            this.userId = loginResp.getUserId();
-            this.roles = loginResp.getRoles();
+        this.token = loginResp.getToken();
+        this.userId = loginResp.getUserId();
+        this.roles = loginResp.getRoles();
 
-            System.out.println(mapper.writeValueAsString(loginResp));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        System.out.println(mapper.writeValueAsString(loginResp));
     }
 
-    public  void listSchools(Map map) {
+    public  List<SchoolInfo> listSchools(Request req) {
 
         MultiValueMap<String, String> headers = this.getRequestHeaders(true);
         HttpEntity<String> request = new HttpEntity<String>(headers);
 
-        ResponseEntity<String> status = restTemplate.exchange(listSchools, HttpMethod.GET, request, String.class);
+        ResponseEntity<List<SchoolInfo>> schoolList = restTemplate.exchange(listSchools,
+                HttpMethod.GET, request, 
+                new ParameterizedTypeReference<List<SchoolInfo>>() {});
 
-        System.out.println(status);
+        System.out.println(schoolList);
+        if(schoolList != null && schoolList.hasBody()){
+            List<SchoolInfo> schools = schoolList.getBody();
+            return schools;
+        }
+        return null;
     }
 
     public void registerSchool(School school) throws Exception {
 
         MultiValueMap<String, String> headers = this.getRequestHeaders(true);
-        HttpEntity<School> request = 
-            new HttpEntity<StudentRegisterInfo>(school, headers);
+        HttpEntity<School> request = new HttpEntity<School>(school, headers);
 
         ObjectMapper mapper = new ObjectMapper();
         System.out.println(mapper.writeValueAsString(request));
@@ -129,12 +133,12 @@ public class SentinelClient {
 
     // unregister a school. 
     // // list schools. 
-    public void unregisterSchool(Map map) throws Exception {
+    public void unregisterSchool(Request req) throws Exception {
 
     }
 
 
-    public void updateSchool(Map map) throws Exception {
+    public void updateSchool(Request req) throws Exception {
 
     }
 
@@ -197,24 +201,51 @@ public class SentinelClient {
         return profile.getBody();
     }
 
+    public List<StudentInfo> listStudents(Request req) throws Exception {
 
-    public List<ClubInfo
+        MultiValueMap<String, String> headers = this.getRequestHeaders(true);
+        HttpEntity<String> request = new HttpEntity<String>(headers);
 
+        ResponseEntity<List<StudentInfo>> studentList = restTemplate.exchange(listStudents,
+                HttpMethod.GET, request, 
+                new ParameterizedTypeReference<List<StudentInfo>>() {});
 
-        public List<ClubInfo
+        System.out.println(studentList);
+        if(studentList != null && studentList.hasBody()){
+            List<StudentInfo> students = studentList.getBody();
+            return students;
+        }
+        return null;
+    }
 
-
-    public List<StudentInfo> lookupStudents(LookupInfo info) throws Exception {
+    public void updateProfile(Request req) throws Exception {
 
     }
 
+    public void unregisterStudent(Request req) throws Exception {
 
-    public List<ClubInfo>  listClubs(LookupInfo info) throws Exception {
+    }
 
+    public List<Club>  listClubs(Request req) throws Exception {
+
+        return null;
     }
 
 
-    public void registerClub(Map map) throws Exception {
+    public void registerClub(Request req) throws Exception {
 
     }
+
+    public void registerWithClub(Request req) throws Exception {
+
+    }
+
+    public void unregisterWithClub(Request req) throws Exception {
+
+    }
+
+    public void updateClubMemberStatus(Request req) throws Exception {
+
+    }
+
 }

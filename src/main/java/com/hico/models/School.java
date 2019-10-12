@@ -1,6 +1,7 @@
 package com.hico.models;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.HashSet;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -30,7 +31,7 @@ public class School {
         this.phoneNos = phoneNos;
     }
 
-    public vod setSchoolAdmins(HashSet<String> admins) {
+    public void setSchoolAdmins(HashSet<String> admins) {
         this.schoolAdmins = admins;
     }
 
@@ -38,14 +39,14 @@ public class School {
         return this.schoolAdmins;
     }
 
-    public static School contruct(Map map) throws Exception {
+    public static School construct(Request req) throws Exception {
 
-        String name = (String) map.get("name");
-        Address address = Address.contrict(map);
-        String phonesStr = (String) map.get("phone");
+        String name = req.get("name");
+        Address address = Address.construct(req);
+        String phonesStr = req.get("phone", false);
 
-        String regCode = (String) map.get("phone");
-        String adminStr = (String) map.get("admins");
+        String regCode = req.get("regcode", false);
+        String adminStr = req.get("admins", false);
 
         School school = new School(name, address);
 
@@ -66,5 +67,6 @@ public class School {
             }
             school.setPhoneNos(phList);
         }
+        return school;
     }
 }
